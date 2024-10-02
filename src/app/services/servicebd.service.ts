@@ -41,6 +41,7 @@ export class ServicebdService {
 
         //modificar el status de la base de datos 
         this.isDBredy.next(true);
+        this.consultarNoticias();
       }).catch(e=>{
         this.presentAlert('crear BD','Error' + JSON.stringify(e));
       })
@@ -49,6 +50,10 @@ export class ServicebdService {
 
   fetchNoticias(): Observable<Noticias[]>{
     return this.listanoticias.asObservable();
+  }
+
+  dbState(){
+    return this.isDBredy.asObservable();
   }
 
   update(){
@@ -76,6 +81,62 @@ export class ServicebdService {
     await alert.present();
   }
 
+  //funcion para traer todas las noticias registradas
+
+  consultarNoticias(){
+    //retornar la ejecucion de la sentencia sql
+    return this.database.executeSql('SELECT * FROM noticia',[]).then(res=>{
+      //crear variable que almacena el resultado del select ya que la variable res solo guarda la consulta temporalmente
+      let items:Noticias[] = [];
+      //verificar si existen registros traidos por el select 
+      if(res.rows.length > 0 ){
+        //recorro el resultado registro a registro
+        for(var i = 0; i < res.rows.lenght; i++){
+          //agregar registro a registro en mi arreglo items
+          items.push({
+            //la estructura de esto es variable (nombre de la clase): valor (nombre base e datos)
+            idnoticia:res.items(i).idnoticia,
+            titulo:res.items(i).titulo,
+            texto:res.items(i).texto
+          })
+        }
+        //actualizar el observable ya que tenemos los nuevos registros con el cual modificar su valor
+        this.listanoticias.next(items as any);
+
+      }
+
+    })
+  }
+
+  //insertar un nuevo registro en la tabla noticias
+  //necesito los datos a ingresar, no necesito el id ya que lo defini como autoincrementable
+  insertarNoticias(tit:string, tex:string){
+    //cuando las variables a ingresar son variables de programacion, remplazo los valores por signo de interrogacion
+    return this.database.executeSql('INSERT INTO noticia(titulo,texto) VALUES (?,?)'
+    ,[tit,tex]).then(res=>{
+      this.presentAlert('insert','moticia creada de forma correcta');
+    }).catch(e=>{
+      this.presentAlert('insert noticia','error: '+JSON.stringify(e));
+    })
+  }
+
+  modificarNoticia(id:number, tit:string, tex:string){
+    //las variables que envio "corchetes azul" deben ser en el orden de los signos de interrogacion
+    return this.database.executeSql('UPDATE noticia SET titulo = ?,texto=? where idnoticia = ?',[tit,tex,id]).then(res=>{
+      this.presentAlert('update','noticia modificada de manera correcta');
+    }).catch(e=>{
+      this.presentAlert('update fallido','error: '+JSON.stringify(e));
+    })
+  }
+
+  eliminarNoticia(id:number){
+    return this.database.executeSql('DELETE FROM noticia WHERE idnoticia = ?',[id])
+    .then(res=>{
+      this.presentAlert('delete','noticia eliminada de manera correcta');
+    }).catch(e=>{
+      this.presentAlert('delete noticia','error: ' + JSON.stringify(e));
+    })
+  }
 
 
 
